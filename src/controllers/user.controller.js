@@ -19,31 +19,30 @@ const registerUser = asyncHandler(async (req,res) => {
     const {username,email,password,fullname} = req.body;
     console.log("email :",email);
 
-
-
     //validate user details - not empty
 
 
     // if(
     //     [username,email,password,fullname].some((field) => field?.trim() === "")
     // )
-    if(fullname = ""){
+
+    if(fullname === ""){
         throw new apiError(400,"Fullname is required")
     }
-    if(username = ""){
+    if(username === ""){
         throw new apiError(400,"Username is required")
     }
-    if(email = ""){
+    if(email === ""){
         throw new apiError(400,"Email is required")
     }
-    if(password = ""){
+    if(password === ""){
         throw new apiError(400,"Password is required")
     }
 
 
     //check if user exists already : username ,email
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or : [{username},{email}]
     })
 
@@ -82,7 +81,7 @@ const registerUser = asyncHandler(async (req,res) => {
 
     //remove password and refresh token field  from response
 
-    const createdUser = await User.findbyID(user._id).select("-password -refreshToken")
+    const createdUser = await User.findById(user._id).select("-password -refreshToken")
 
 
     //check for user creation
