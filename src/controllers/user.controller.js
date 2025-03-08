@@ -6,7 +6,7 @@ import {ApiResponse} from '../utils/ApiResponse.js';
  
 const generateAccessAndRefreshTokens = async(userId) =>{
     try {
-        await User.findById(userId)
+        const user = await User.findById(userId)
         const accessToken =  user.accessTokenGenerator();
         const refreshToken =  user.refreshTokenGenerator();
 
@@ -190,11 +190,11 @@ const logOutUser = asyncHandler(async (req,res) => {
     //clear cookies
     //send response
 
-    await User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set : {
-                refreshToken : Undefined
+                refreshToken : undefined
             }
         },
         {
