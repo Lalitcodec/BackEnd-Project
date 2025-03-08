@@ -6,23 +6,29 @@ import { User } from "../models/user.model.js"
 
 export const verifyJWT = asyncHandler(async (req,res,next) => {
 
+    console.log("🔹 Cookies:", req.cookies);
+    console.log("🔹 Authorization Header:", req.headers.authorization);
+
     try{
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ","")
 
-        let token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
 
-        console.log("Received Token:", token);
+        // If token is still undefined, throw an error
+        if (!token) {
+            throw new apiError(401, "Unauthorized - No token provided");
+        }
 
-        // const token = req.cookies?.accessToken  
-        // || req.header("Authorization")?.replace("Bearer ","")
+    
 
         console.log("token : ",token);
         
         if(!token){
+            console.log(" Token missing or invalid:", token);
             throw new apiError(401,"Unauthorized request ")
         }
     
     
-        const decodedToken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
     
         const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
     

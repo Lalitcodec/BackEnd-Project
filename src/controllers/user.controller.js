@@ -7,8 +7,12 @@ import {ApiResponse} from '../utils/ApiResponse.js';
 const generateAccessAndRefreshTokens = async(userId) =>{
     try {
         const user = await User.findById(userId)
-        const accessToken =  user.accessTokenGenerator();
-        const refreshToken =  user.refreshTokenGenerator();
+        const accessToken =  await user.accessTokenGenerator();
+        const refreshToken = await user.refreshTokenGenerator();
+
+        console.log("🟢 Generated accessToken:", accessToken);
+        console.log("🟢 Generated refreshToken:", refreshToken);
+
 
         user.refreshToken = refreshToken;
         await user.save({validateBeforeSave : false})
@@ -167,15 +171,21 @@ const loginUser = asyncHandler(async (req,res) => {
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
+    console.log("🟢 Sending accessToken:", accessToken);
+    console.log("🟢 Sending refreshToken:", refreshToken);
+
+    
     const options = {
         httpOnly : true,
-        secure : true
+        secure : true,
+        sameSite: "Strict"
     }
 
     return res
     .status(200)
     .cookie("accessToken",accessToken,options)
-    .cookie("refreshToken",refreshToken,options).json(
+    .cookie("refreshToken",refreshToken,options)
+    .json(
         new ApiResponse(
             200,
             {
