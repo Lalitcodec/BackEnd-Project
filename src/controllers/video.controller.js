@@ -11,7 +11,55 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
 
+    // Parse pagination values
+    const pageNum = parseInt(page);
+    const pageLImit = parseInt(limit)
+
+    // Define default sorting (based on the "sortBy" and "sortType" parameters)
+    const sortObject = {};
+    sortObject[sortBy] = sortType === "asc" ? 1 : -1;
+
+    // Build the filter object
+    const filter = {};
+
+    // If the "query" parameter is present, filter by title and description
+    if (query) {
+    const regex = new RegExp(query, "i");
+    filter.$or = [
+        { title : { $regex : regex } },
+        { description : { $regex : regex } }
+    ];
+    }
+
+    // If the "userId" parameter is present, filter by the user ID
+    if (userId) {
+        filter(videoOwner) = userId;
+    }
+
+    // Aggregate query
+    const options = {
+        page: pageNum,
+        limit: pageLimit,
+        sort: sortObject,
+    };
+
+    try {
+        // Use aggregation and pagination together
+        const videos = await Video.aggregatePaginate(
+            Video.aggregate([
+                { $match: filter }, // Apply filters (query, userId, etc.)
+                { $sort: sortObject }, // Apply sorting
+            ]),
+            options
+        );
+
+        // Return the paginated and filtered video data
+        res.status(200).json(videos);
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving videos", error: error.message });
+    }
 })
+
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
@@ -52,7 +100,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     //create the video
 
-    const video = await Video.create({
+    const newvideo = await Video.create({
         videoFile : videos.url,
         thumbnail : thumbnail.url,
         title,
@@ -60,6 +108,14 @@ const publishAVideo = asyncHandler(async (req, res) => {
         duration : 0,
         videoOwner : req.user._id
     })
+
+    //return the response
+
+    return res
+        .status(201)
+        .json(
+            new ApiResponse(201,newvideo,"Video published successfully")
+        )
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
@@ -120,11 +176,53 @@ const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
 
-    
+    //find the video by id
+
+    const video = await Video.findById(videoId)
+
+     //check if video is present
+
+    if(!video){
+        throw new apiError(404,"Video not found")
+    }
+
+    //delete the video
+    uploadOnCloudinary.uploader.destroy(video.videoFile)
+    uploadOnCloudinary.uploader.destroy(video.thumbnail)
+    await video.remove()
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200,"Video deleted successfully")
+        )
+
+
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    //find the video
+    const video = await Video.findById(videoId)
+
+    //validate video
+    if(!video){
+        throw new apiError(404,"Video not found")
+    }
+
+    // Toggle the publish status
+    video.isPublished = !video.isPublished
+
+    // Step 5: Return a success response with the updated video status
+    res.status(200).json({
+        message: `Video publish status updated to ${video.isPublished ? "published" : "unpublished"}`,
+        video: {
+            _id: video._id,
+            title: video.title,
+            isPublished: video.isPublished,
+        },
+    });
 })
 
 export {
